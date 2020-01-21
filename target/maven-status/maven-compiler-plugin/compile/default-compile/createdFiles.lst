@@ -1,0 +1,7 @@
+com/doku/bm/example/au/dto/SftpDownloadRequest.class
+com/doku/bm/example/au/controller/SftpController.class
+com/doku/bm/example/au/service/SftpService.class
+com/doku/bm/example/au/dto/SftpUploadRequest.class
+com/doku/bm/example/au/ExampleAuApplication.class
+com/doku/bm/example/au/dto/MessageRequest.class
+com/doku/bm/example/au/config/SwaggerConfig.class
