@@ -12,6 +12,10 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -27,29 +31,28 @@ public class EmailService {
     private String envHost;
 
     public void get(EmailDownloadRequest emailDownloadRequest) throws IOException {
-        String url = envHost + emailPath;
-        RestTemplate restTemplate = new RestTemplate();
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+        String uri = envHost + emailPath;
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(uri)
                 // Add query parameter
                 .queryParam("requestId", emailDownloadRequest.getRequestId())
                 .queryParam("clientId", emailDownloadRequest.getClientId())
                 .queryParam("message", emailDownloadRequest.getMessage())
                 .queryParam("host", emailDownloadRequest.getHost())
                 .queryParam("port", emailDownloadRequest.getPort())
-                .queryParam("username" , emailDownloadRequest.getUsername())
-                .queryParam("password" , emailDownloadRequest.getPassword())
+                .queryParam("username" , URLEncoder.encode(emailDownloadRequest.getUsername(), StandardCharsets.UTF_8.toString()))
+                .queryParam("password" , URLEncoder.encode(emailDownloadRequest.getPassword(), StandardCharsets.UTF_8.toString()))
                 .queryParam("labelName", emailDownloadRequest.getLabelName());
 
         String uriEmail = builder.build().toString();
-
         log.info("URL :: " + uriEmail);
 
-        ResponseEntity<Resource> responseEntity = restTemplate.getForEntity(
-                uriEmail,
-                Resource.class);
+        URL url = new URL(uriEmail);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("GET");
 
-        InputStream result = responseEntity.getBody().getInputStream();
+        InputStream result = con.getInputStream();
+
         fileParserReadyService.unzipFile(result, emailDownloadRequest.getLocalPath());
     }
 }

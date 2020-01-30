@@ -4,13 +4,14 @@ import com.doku.bm.example.au.dto.SftpDownloadRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 @Service
@@ -26,16 +27,15 @@ public class SftpService {
     private String envHost;
 
     public void get(SftpDownloadRequest sftpDownloadRequest) throws IOException {
-        String url = envHost + sftpPath;
-        RestTemplate restTemplate = new RestTemplate();
+        String uri = envHost + sftpPath;
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(url)
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(uri)
                 // Add query parameter
                 .queryParam("requestId", sftpDownloadRequest.getRequestId())
                 .queryParam("clientId", sftpDownloadRequest.getClientId())
                 .queryParam("message", sftpDownloadRequest.getMessage())
-                .queryParam("username" , sftpDownloadRequest.getUsername())
-                .queryParam("password" , sftpDownloadRequest.getPassword())
+                .queryParam("username" , URLEncoder.encode(sftpDownloadRequest.getUsername(), StandardCharsets.UTF_8.toString()))
+                .queryParam("password" , URLEncoder.encode(sftpDownloadRequest.getPassword(), StandardCharsets.UTF_8.toString()))
                 .queryParam("host", sftpDownloadRequest.getHost())
                 .queryParam("port", sftpDownloadRequest.getPort())
                 .queryParam("remotePath", sftpDownloadRequest.getRemotePath());
@@ -58,13 +58,26 @@ public class SftpService {
 //                    return null;
 //                });
 
-        ResponseEntity<Resource> responseEntity = restTemplate.getForEntity(
-                uriSftp,
-                Resource.class);
-        InputStream result = responseEntity.getBody().getInputStream();
-        String newFileName = responseEntity.getBody().getFilename();
+        URL url = new URL(uriSftp);
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestMethod("GET");
+        InputStream result = con.getInputStream();
 
-        if (newFileName.contains(".zip")){
+
+/**
+ *
+ * This commented code for hit URL using rest template, but consider the URL decode and encode
+ */
+//        RestTemplate restTemplate = new RestTemplate();
+//        ResponseEntity<Resource> responseEntity = restTemplate.getForEntity(
+//                uriSftp,
+//                Resource.class);
+//        InputStream result = responseEntity.getBody().getInputStream();
+//        String newFileName = responseEntity.getBody().getFilename();
+
+        String newFileName = sftpDownloadRequest.getRemotePath().substring(sftpDownloadRequest.getRemotePath().lastIndexOf('/') + 1);
+
+        if (!newFileName.contains(".")){
             fileParserReadyService.unzipFile(result, sftpDownloadRequest.getLocalPath());
         } else {
             fileParserReadyService.move2Local(result, sftpDownloadRequest.getLocalPath(), newFileName);
